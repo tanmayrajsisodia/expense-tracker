@@ -1,0 +1,98 @@
+Expenses Tracker
+
+A small command-line tool for keeping track of what I spend. I made it to practise using Python and SQL together: Python handles the command-line side, and SQLite does the storing and the number crunching.
+
+Everything is in one file, expenses_tracker.py, and it only uses Python's standard library, so there is nothing to install.
+
+
+What it does
+
+- Log an expense with an amount, a category, a short note and a date
+- List expenses, filtered by month or category if you want
+- Show where the money goes, as totals and percentages per category
+- Compare spending month by month
+- Find your biggest expenses
+- Delete a wrong entry
+- Export everything to a CSV file you can open in Excel or Google Sheets
+
+
+Getting started
+
+You need Python 3.8 or newer. To check what you have:
+
+    python --version
+
+Download expenses_tracker.py, open a terminal in the same folder, and try:
+
+    python expenses_tracker.py add 250 food "Lunch"
+    python expenses_tracker.py list
+
+On Mac or Linux you may need to type python3 instead of python, and on Windows py sometimes works better.
+
+The first time you add something, the script creates a file called expenses.db in the folder where you ran it. That's your data. Run the script from the same folder each time so it keeps finding it.
+
+
+Commands
+
+    python expenses_tracker.py add 3000 rent "November rent" --date 2026-11-01
+    python expenses_tracker.py list --month 2026-11
+    python expenses_tracker.py list --category food
+    python expenses_tracker.py summary
+    python expenses_tracker.py monthly
+    python expenses_tracker.py top --n 3
+    python expenses_tracker.py delete 2
+    python expenses_tracker.py export expenses.csv
+
+If you leave out --date, today's date is used. Dates have to be written as YYYY-MM-DD. Running the script with --help lists everything.
+
+
+What the output looks like
+
+After adding a few expenses, list prints something like this:
+
+    ID   Date         Category           Amount  Description
+    ------------------------------------------------------------
+    4    2026-11-03   Food               400.00  Groceries
+    5    2026-11-01   Rent              3000.00  Rent
+    2    2026-10-20   Transport         1200.00  Cab
+    1    2026-10-05   Food               250.00  Lunch
+    3    2026-10-01   Rent              3000.00  Rent
+    ------------------------------------------------------------
+    Total: 7850.00  (5 expenses)
+
+summary shows how the spending splits across categories:
+
+    Category       Count        Total   Share
+    ------------------------------------------
+    Rent               2      6000.00   76.4%
+    Transport          1      1200.00   15.3%
+    Food               2       650.00    8.3%
+
+And monthly shows how each month compares with the one before:
+
+    Month            Total       Change
+    -----------------------------------
+    2026-10        4450.00            -
+    2026-11        3400.00     -1050.00
+
+
+How it works
+
+There is a single table, expenses, with an id, an amount, a category, a description and a date. The amount has a check so it can't be zero or negative, and there is an index on the date to keep date lookups quick.
+
+All the queries use placeholders (?) instead of building SQL from user input, which avoids SQL injection. The more interesting SQL is in the reports:
+
+- summary uses GROUP BY together with a window function, SUM(SUM(amount)) OVER (), to work out each category's share of the total.
+- monthly uses a CTE to total each month, then LAG() to subtract the previous month's total.
+
+The window functions need SQLite 3.25 or newer. Any recent Python already includes it, but if summary or monthly gives a syntax error, an old SQLite version is the likely reason. You can check yours with:
+
+    python -c "import sqlite3; print(sqlite3.sqlite_version)"
+
+
+Things I'd like to add
+
+- Monthly budgets per category, with a warning when you go over
+- An update command to edit an expense instead of deleting and re-adding it
+- A chart of the category summary using matplotlib
+- Some tests, using an in-memory database
